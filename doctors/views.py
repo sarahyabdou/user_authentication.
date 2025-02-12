@@ -17,24 +17,10 @@ from werkzeug.security import generate_password_hash
 from app.models import User, db
 from flask import jsonify
 from app.doctors import doctor_blueprint
-# @doctor_blueprint.route('/login', methods=['GET','POST'], endpoint="login")
-# def login():
-#     if request.method == 'GET':
-#         return render_template('login.html')
-#     data = request.get_json(silent=True)  # Safe JSON parsing
-#
-#     print("✅ Received data:", data)  # Debugging
-#
-#     if not data or 'username' not in data or 'password' not in data:
-#         return jsonify({'error': 'Missing username or password'}), 400
-#
-#     response, status_code = User.login(data['username'], data['password'])
-#     return jsonify(response), status_code
-#     return render_template('login.html')
 @doctor_blueprint.route('/login', methods=['GET', 'POST'], endpoint="login")
 def login():
     if request.method == 'GET':
-        return render_template('doctors/login.html')  # ✅ Show login page on GET request
+        return render_template('doctors/login.html')
 
     # Handle API JSON request (e.g., from Postman)
     if request.is_json:
@@ -43,7 +29,7 @@ def login():
             return jsonify({'error': 'Missing username or password'}), 400
 
         response, status_code = User.login(data['username'], data['password'])
-        return jsonify(response), status_code  # ✅ Return JSON response
+        return jsonify(response), status_code
 
     # Handle form submission (from browser)
     username = request.form.get('username')
@@ -57,7 +43,7 @@ def login():
 
     if status_code == 200:
         flash('Login successful!', 'success')
-        return redirect(url_for('doctor.dashboard'))  # Replace with actual dashboard route
+        return redirect(url_for('doctor.dashboard'))
     else:
         flash(response['error'], 'danger')
         return redirect(url_for('doctor.login'))

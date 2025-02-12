@@ -28,16 +28,16 @@ class User(db.Model):
 
     @classmethod
     def login(cls, username, password):
-        print("🔍 Checking database for user:", username)  # Debugging
+
 
         user = cls.query.filter_by(username=username).first()
 
         if not user:
-            print("❌ User not found!")  # Debugging
+
             return {'error': 'User not found'}, 404
 
         if not check_password_hash(user.password, password):
-            print("❌ Incorrect password!")  # Debugging
+
             return {'error': 'Invalid credentials'}, 401
 
         token = jwt.encode(
