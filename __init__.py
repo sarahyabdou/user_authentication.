@@ -1,3 +1,6 @@
+import os
+from datetime import timedelta
+
 from flask import Flask
 from app.config import config_options as AppConfig
 from app.models import  db
@@ -7,6 +10,9 @@ from flask_restful import Api
 from app.models import User
 from  app.doctors import doctor_blueprint
 from app.doctors.views import doctor_blueprint  #
+from flask_jwt_extended import JWTManager
+
+from app.models import jwt
 
 api = Api()
 def create_app(config_name='dev'):
@@ -15,12 +21,20 @@ def create_app(config_name='dev'):
     #define configrations
     current_config=AppConfig[config_name]
     app.config['SQLALCHEMY_DATABASE_URI']=current_config.SQLALCHEMY_DATABASE_URI
+
     app.config.from_object(current_config)
 
+
+    jwt = JWTManager(app)
+    app.config['JWT_SECRET_KEY'] = os.urandom(24).hex()
+
     print("✅ SECRET_KEY:", app.config["SECRET_KEY"])
+
     db .init_app(app)
     migrate=Migrate(app,db, render_as_batch=True)
-    api.init_app(app)   # generate apis for this project
+    api.init_app(app)
+    jwt.init_app(app)
+    # generate apis for this project
     # add the class student resource to the api
 
 

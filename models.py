@@ -1,12 +1,19 @@
 import datetime
-
+import json
+from functools import wraps
 import jwt
+from flask import request,jsonify
 from flask import current_app
+from flask_jwt_extended import JWTManager, verify_jwt_in_request, get_jwt_identity, create_access_token, \
+    create_refresh_token
+import  os
 
+SECRET_KEY = os.urandom(32).hex()
 from flask_sqlalchemy import  SQLAlchemy
 from werkzeug.security import check_password_hash, generate_password_hash
 
 db=SQLAlchemy()
+
 class User(db.Model):
     __tablename__ = 'doctors'
     id=db.Column(db.Integer,primary_key=True)
@@ -21,6 +28,7 @@ class User(db.Model):
 
     def __str__(self):
         return {self.username},{self.password},self.last_name
+
     @classmethod
     def user_exists(cls, username):
         user = db.session.query(cls.id).filter_by(username=username).first()
@@ -28,29 +36,31 @@ class User(db.Model):
 
     @classmethod
     def login(cls, username, password):
-
-
         user = cls.query.filter_by(username=username).first()
 
         if not user:
-
             return {'error': 'User not found'}, 404
 
         if not check_password_hash(user.password, password):
+            return {'error': 'password uncorrect'}, 401
 
-            return {'error': 'Invalid credentials'}, 401
+        # ✅ Ensure identity is a string or JSON-serializable
+        identity = json.dumps({
+            "user_id": user.id,
+            "role": user.role,
+            "username": user.username
+        })
 
-        token = jwt.encode(
-            {
-                'user_id': user.id,
-                'role': user.role,
-                'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
-            },
-            current_app.config['SECRET_KEY'],
-            algorithm="HS256"
-        )
+        access_token = create_access_token(identity=identity, expires_delta=datetime.timedelta(hours=1))
+        refresh_token = create_refresh_token(identity={"user_id": user.id})  # Keep this if it works fine
 
-        return {'token': token}, 200
+        return {
+            "message": "Logged in",
+            "token": {
+                "access": access_token,
+                "refresh": refresh_token
+            }
+        }, 200
     @classmethod
     def signup(cls,username,password):
         if cls.query.filter_by(username=username).first():
@@ -60,4 +70,5 @@ class User(db.Model):
         db.session.add(new_user)
         db.session.commit()
         return {'message':'success!,sign-up completed'},201
+
 

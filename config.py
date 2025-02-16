@@ -1,8 +1,12 @@
 import os
 
+from flask import app
+
 
 class Config:
     SECRET_KEY = os.urandom(32).hex()
+
+
     @staticmethod
     def init_app():
         pass
@@ -18,5 +22,4 @@ config_options = {
     "dev": DevelopmentConfig,
     "prd": DevelopmentConfig
 }
-
 

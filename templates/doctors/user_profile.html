@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <!-- Locally hosted Bootstrap CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap-5.3.3-dist/css/bootstrap.css') }}">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-body text-center">
+                        <h1 class="card-title mb-4">User Profile</h1>
+                        <p class="card-text"><strong>ID:</strong> {{ user.id }}</p>
+                        <p class="card-text"><strong>Username:</strong> {{ user.username }}</p>
+                        <p class="card-text"><strong>Role:</strong> {{ user.role }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Locally hosted Bootstrap JS -->
+    <script src="{{ url_for('static', filename='bootstrap-5.3.3-dist/js/bootstrap.bundle.js') }}"></script>
+</body>
+</html>
