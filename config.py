@@ -5,7 +5,10 @@ from flask import app
 
 class Config:
     SECRET_KEY = os.urandom(32).hex()
-
+    UPLOAD_FOLDER = "uploads"
+    ALLOWED_EXTENSIONS = {"pdf", "jpg", "png"}
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
 
     @staticmethod
     def init_app():

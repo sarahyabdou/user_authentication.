@@ -1,14 +1,14 @@
 import os
 from datetime import timedelta
 
-from flask import Flask
+from flask import Flask, app
 from app.config import config_options as AppConfig
 from app.models import  db
 from app.config import Config
 from flask_migrate import Migrate
 from flask_restful import Api
 from app.models import User
-from  app.doctors import doctor_blueprint
+from app.doctors import doctor_blueprint, upload_blueprint
 from app.doctors.views import doctor_blueprint  #
 from flask_jwt_extended import JWTManager
 
@@ -27,7 +27,9 @@ def create_app(config_name='dev'):
 
     jwt = JWTManager(app)
     app.config['JWT_SECRET_KEY'] = os.urandom(24).hex()
-
+    app.config['UPLOAD_DIRECTORY'] = 'uploads/'
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
+    app.config['ALLOWED_EXTENSIONS'] = ['.jpg', '.jpeg', '.png', '.gif']
     print("✅ SECRET_KEY:", app.config["SECRET_KEY"])
 
     db .init_app(app)
@@ -39,6 +41,7 @@ def create_app(config_name='dev'):
 
 
     app.register_blueprint(doctor_blueprint, url_prefix='/api')
+    app.register_blueprint(upload_blueprint, url_prefix='/file')
 
 
     return app

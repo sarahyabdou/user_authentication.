@@ -7,6 +7,8 @@ from flask import current_app
 from flask_jwt_extended import JWTManager, verify_jwt_in_request, get_jwt_identity, create_access_token, \
     create_refresh_token
 import  os
+from app.config import  Config
+from werkzeug.utils import redirect
 
 SECRET_KEY = os.urandom(32).hex()
 from flask_sqlalchemy import  SQLAlchemy
@@ -28,6 +30,7 @@ class User(db.Model):
 
     def __str__(self):
         return {self.username},{self.password},self.last_name
+
 
     @classmethod
     def user_exists(cls, username):
@@ -52,7 +55,8 @@ class User(db.Model):
         })
 
         access_token = create_access_token(identity=identity, expires_delta=datetime.timedelta(hours=1))
-        refresh_token = create_refresh_token(identity={"user_id": user.id})  # Keep this if it works fine
+        refresh_token = create_refresh_token(identity={"user_id": user.id})
+        # Keep this if it works fine
 
         return {
             "message": "Logged in",
@@ -72,3 +76,4 @@ class User(db.Model):
         return {'message':'success!,sign-up completed'},201
 
 
+# point3

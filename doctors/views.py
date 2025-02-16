@@ -3,11 +3,14 @@ import os
 import  re
 from datetime import timedelta
 
+from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.utils import secure_filename, send_from_directory
+from app import Config
 import app
 
+UPLOAD_FOLDER = "uploads"
 
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token, current_user
-from sqlalchemy import except_, True_
 
 from datetime import  datetime,timedelta
 from flask import Flask, request, jsonify, app, render_template, flash, redirect, url_for, session
@@ -19,7 +22,9 @@ from werkzeug.security import generate_password_hash
 
 from app.models import User, db
 from flask import jsonify
-from app.doctors import doctor_blueprint
+from app.doctors import doctor_blueprint, upload_blueprint
+
+
 @doctor_blueprint.route('/login', methods=['GET', 'POST'], endpoint="login")
 
 def login():
@@ -126,4 +131,87 @@ def refresh_access():
 
     return jsonify({"access_token": new_access_token})
 
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in Config.ALLOWED_EXTENSIONS
+@upload_blueprint.route("/upload", methods=["POST"])
+@jwt_required()
+def upload_file():
+    current_user = get_jwt_identity()  # Extract user ID from JWT token
 
+    user_id = request.form.get("user_id")
+    phone_number = request.form.get("phone_number")
+    country_code = request.form.get("country_code")
+    id_of_uploader = request.form.get("id_of_uploader")
+    result_date = request.form.get("result_date")
+    selected_lab_test = request.form.get("selected_lab_test")
+    result_type = request.form.get("result_type")
+    file = request.files.get("files")
+    if not all(
+            [user_id, phone_number, country_code, id_of_uploader, result_date, selected_lab_test, result_type, file]):
+            return jsonify({"error": "Missing required fields", "missing_fields": {
+            "user_id": user_id,
+            "phone_number": phone_number,
+            "country_code": country_code,
+            "id_of_uploader": id_of_uploader,
+            "result_date": result_date,
+            "selected_lab_test": selected_lab_test,
+            "result_type": result_type,
+        }}), 400
+
+    if not allowed_file(file.filename):
+        return jsonify({"error": "Invalid file format. Allowed: pdf, jpg, png"}), 400
+
+    filename = secure_filename(file.filename)
+    file_path = os.path.join(UPLOAD_FOLDER, f"user_{user_id}_{filename}")
+    file.save(file_path)
+
+    return jsonify({
+        "message": "File uploaded successfully",
+        "file_url": file_path
+    }), 200
+# @upload_blueprint.route("/up", methods=["GET", "POST"])
+#
+# def upload_file():
+#     if request.method == "POST":
+#         # Extract data from form
+#         user_id = request.form.get("user_id")
+#         phone_number = request.form.get("phone_number")
+#         country_code = request.form.get("country_code")
+#         id_of_uploader = request.form.get("id_of_uploader")
+#         result_date = request.form.get("result_date")
+#         selected_lab_test = request.form.get("selected_lab_test")
+#         result_type = request.form.get("result_type")
+#         file = request.files.get("files")
+#
+#
+#         missing_fields = {
+#             "user_id": user_id,
+#             "phone_number": phone_number,
+#             "country_code": country_code,
+#             "id_of_uploader": id_of_uploader,
+#             "result_date": result_date,
+#             "selected_lab_test": selected_lab_test,
+#             "result_type": result_type,
+#             "files": file
+#         }
+#
+#         missing = [key for key, value in missing_fields.items() if not value]
+#
+#         if missing:
+#             flash(f"Missing required fields: {', '.join(missing)}", "danger")
+#             return redirect(url_for("upload_file"))
+#
+#
+#         if not allowed_file(file.filename):
+#             flash("Invalid file format. Allowed: pdf, jpg, png", "danger")
+#             return redirect(url_for("upload_file"))
+#
+#         # Save the file
+#         filename = secure_filename(f"user_{user_id}_{file.filename}")
+#         file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+#         file.save(file_path)
+#
+#         flash(f"File uploaded successfully for User ID: {user_id}!", "success")
+#         return redirect(url_for("upload_file"))
+#
+#     return render_template("doctors/upload.html")
