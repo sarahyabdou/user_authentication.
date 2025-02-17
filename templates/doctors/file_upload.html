@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload File</title>
+</head>
+<body>
+    <h1>Upload Lab Test Result</h1>
+    <form id="uploadForm">
+        <div>
+            <label for="user_id">User ID:</label>
+            <input type="text" id="user_id" name="user_id" required>
+        </div>
+        <div>
+            <label for="phone_number">Phone Number:</label>
+            <input type="text" id="phone_number" name="phone_number" required>
+        </div>
+        <div>
+            <label for="country_code">Country Code:</label>
+            <input type="text" id="country_code" name="country_code" required>
+        </div>
+        <div>
+            <label for="id_of_uploader">Uploader ID:</label>
+            <input type="text" id="id_of_uploader" name="id_of_uploader" required>
+        </div>
+        <div>
+            <label for="result_date">Result Date:</label>
+            <input type="date" id="result_date" name="result_date" required>
+        </div>
+        <div>
+            <label for="selected_lab_test">Lab Test:</label>
+            <input type="text" id="selected_lab_test" name="selected_lab_test" required>
+        </div>
+        <div>
+            <label for="result_type">Result Type:</label>
+            <input type="text" id="result_type" name="result_type" required>
+        </div>
+        <div>
+            <label for="file">Upload File:</label>
+            <input type="file" id="file" name="file" required>
+        </div>
+        <button type="submit">Upload</button>
+    </form>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const formData = new FormData();
+            formData.append('user_id', document.getElementById('user_id').value);
+            formData.append('phone_number', document.getElementById('phone_number').value);
+            formData.append('country_code', document.getElementById('country_code').value);
+            formData.append('id_of_uploader', document.getElementById('id_of_uploader').value);
+            formData.append('result_date', document.getElementById('result_date').value);
+            formData.append('selected_lab_test', document.getElementById('selected_lab_test').value);
+            formData.append('result_type', document.getElementById('result_type').value);
+            formData.append('files', document.getElementById('file').files[0]);
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('jwt_token')}` // Assuming JWT token is stored in localStorage
+                    }
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('File uploaded successfully!');
+                    console.log('File URL:', result.file_url);
+                } else {
+                    alert(`Error: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                alert('An error occurred while uploading the file.');
+            }
+        });
+    </script>
+</body>
+</html>
