@@ -222,3 +222,50 @@ def get_all_files_users():
 
     return jsonify(files_data), 200
 
+@doctor_blueprint.route('/update-file-status', methods=['POST'])
+@jwt_required()
+def update_file_status():
+
+    current_user = get_jwt_identity()
+
+    try:
+        current_user = json.loads(current_user)
+    except json.JSONDecodeError:
+        return jsonify({"message": "Invalid token format"}), 401
+
+    if current_user.get("role") != "admin":
+        return jsonify({"message": "You are not authorized to update the file status."}), 403
+
+
+    data = request.get_json()
+    accept_file = data.get('accept_file')
+    file_id = data.get('id_file')
+
+
+    if accept_file not in ['accept', 'reject']:
+        return jsonify({"message": "Invalid value for 'accept_file'. It must be 'accept' or 'reject'."}), 400
+
+
+    new_status = 'approved' if accept_file == 'accept' else 'rejected'
+
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+
+    cursor.execute("SELECT status FROM files WHERE file_id = %s", (file_id,))
+    file = cursor.fetchone()
+
+    if not file:
+        cursor.close()
+        conn.close()
+        return jsonify({"message": "File not found."}), 404
+
+
+    cursor.execute("UPDATE files SET status = %s WHERE file_id = %s", (new_status, file_id))
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+
+    return jsonify({"message": f"File {new_status} successfully!"}), 200
