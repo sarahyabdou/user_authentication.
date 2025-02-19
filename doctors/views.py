@@ -1,7 +1,10 @@
 import datetime
+import json
 import os
 import  re
-from datetime import timedelta
+
+from sqlalchemy.dialects.postgresql import psycopg2
+
 
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename, send_from_directory
@@ -16,15 +19,19 @@ from datetime import  datetime,timedelta
 from flask import Flask, request, jsonify, app, render_template, flash, redirect, url_for, session
 
 from functools import  wraps
-
+from app.config import DevelopmentConfig
 import jwt
 from werkzeug.security import generate_password_hash
-
+import psycopg2
 from app.models import User, db
 from flask import jsonify
-from app.doctors import doctor_blueprint, upload_blueprint
+from app.doctors import doctor_blueprint
 
 
+def get_db_connection():
+
+        conn = psycopg2.connect(DevelopmentConfig.SQLALCHEMY_DATABASE_URI)
+        return conn
 @doctor_blueprint.route('/login', methods=['GET', 'POST'], endpoint="login")
 
 def login():
@@ -174,3 +181,44 @@ def upload_file():
     #     "file_url": file_path
     # }), 200
     return jsonify({"message": "File uploaded successfully!"}), 200
+
+
+
+@doctor_blueprint.route('/get-all-files-users', methods=['GET'])
+@jwt_required()
+def get_all_files_users():
+    current_user = get_jwt_identity()
+
+    try:
+        current_user = json.loads(current_user)
+    except json.JSONDecodeError:
+        return jsonify({"message": "Invalid token format"}), 401
+
+
+    if current_user.get('role') != 'admin':
+        return jsonify({"message": "You are not authorized to access this resource."}), 403
+
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+
+    cursor.execute("""
+        SELECT files.file_id, files.file_name, files.status, doctors.username
+        FROM files
+        JOIN doctors ON files.user_id = doctors.id
+        WHERE files.status = 'pending'
+    """)
+
+
+    pending_files = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+
+    files_data = [{"file_id": file[0], "filename": file[1], "status": file[2], "username": file[3]} for file in
+                  pending_files]
+
+    return jsonify(files_data), 200
+

@@ -75,5 +75,25 @@ class User(db.Model):
         db.session.commit()
         return {'message':'success!,sign-up completed'},201
 
+class File(db.Model):
+    __tablename__ = 'files'
+
+    file_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('doctors.id'), nullable=False)
+    file_name = db.Column(db.String(255), nullable=False)
+    upload_date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(50), nullable=False)
+
+    # Relationship with the User model
+    user = db.relationship('User', backref=db.backref('files', lazy=True))
+
+    def to_dict(self):
+        return {
+            'file_id': self.file_id,
+            'user_id': self.user_id,
+            'file_name': self.file_name,
+            'upload_date': self.upload_date,
+            'status': self.status,
+        }
 
 # point3

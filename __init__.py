@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 
+import psycopg2
 from flask import Flask, app
 from app.config import config_options as AppConfig
 from app.models import  db
@@ -8,7 +9,7 @@ from app.config import Config
 from flask_migrate import Migrate
 from flask_restful import Api
 from app.models import User
-from app.doctors import doctor_blueprint, upload_blueprint
+from app.doctors import doctor_blueprint
 from app.doctors.views import doctor_blueprint  #
 from flask_jwt_extended import JWTManager
 
@@ -23,6 +24,7 @@ def create_app(config_name='dev'):
     app.config['SQLALCHEMY_DATABASE_URI']=current_config.SQLALCHEMY_DATABASE_URI
 
     app.config.from_object(current_config)
+
 
 
     jwt = JWTManager(app)
@@ -41,7 +43,7 @@ def create_app(config_name='dev'):
 
 
     app.register_blueprint(doctor_blueprint, url_prefix='/api')
-    app.register_blueprint(upload_blueprint, url_prefix='/file')
+
 
 
     return app
