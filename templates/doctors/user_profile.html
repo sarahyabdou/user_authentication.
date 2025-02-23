@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Profile</title>
-
     <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap-5.3.3-dist/css/bootstrap.css') }}">
 </head>
 <body>
@@ -18,7 +17,6 @@
                         <p class="card-text"><strong>Username:</strong> {{ user.username }}</p>
                         <p class="card-text"><strong>Role:</strong> {{ user.role }}</p>
 
-
                         {% if user.role == 'admin' %}
                             <button id="viewPendingFiles" class="btn btn-primary mt-3">
                                 View Pending Files
@@ -29,12 +27,11 @@
             </div>
         </div>
 
-        <!-- ✅ Table for displaying pending files -->
+
         <div id="pendingFilesContainer" class="mt-4"></div>
     </div>
 
     <script src="{{ url_for('static', filename='bootstrap-5.3.3-dist/js/bootstrap.bundle.js') }}"></script>
-
 
     <script>
         document.getElementById('viewPendingFiles').addEventListener('click', function () {
@@ -78,7 +75,6 @@
             });
         });
 
-
         function displayFiles(files) {
             let tableHtml = `
                 <table class="table table-striped mt-3">
@@ -88,6 +84,7 @@
                             <th>Filename</th>
                             <th>Status</th>
                             <th>Username</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -100,14 +97,61 @@
                         <td>${file.filename}</td>
                         <td>${file.status}</td>
                         <td>${file.username}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm" onclick="updateFileStatus('${file.file_id}', 'accept')">Accept</button>
+                            <button class="btn btn-danger btn-sm" onclick="updateFileStatus('${file.file_id}', 'reject')">Reject</button>
+                        </td>
                     </tr>
                 `;
             });
 
             tableHtml += `</tbody></table>`;
-
-
             document.getElementById('pendingFilesContainer').innerHTML = tableHtml;
+        }
+
+        function updateFileStatus(fileId, action) {
+            const token = localStorage.getItem('jwt_token'); // Get the JWT token
+
+            if (!token) {
+                alert('You are not logged in. Please log in again.');
+                window.location.href = '/api/login'; // Redirect to login page
+                return;
+            }
+
+            fetch('http://127.0.0.1:5001/api/update-file-status', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id_file: fileId,
+                    accept_file: action
+                })
+            })
+            .then(response => {
+                if (response.status === 401) {
+                    alert('Unauthorized: Please log in again.');
+                    window.location.href = '/api/login';
+                    return;
+                }
+                if (response.status === 403) {
+                    alert('Access Denied: Only admins can update file status.');
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert(data.message); // Show success or error message
+                if (data.message.includes("successfully")) {
+                    // Refresh the table to reflect the updated status
+                    document.getElementById('viewPendingFiles').click();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the file status.');
+            });
         }
     </script>
 </body>
