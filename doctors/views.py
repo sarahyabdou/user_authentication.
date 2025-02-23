@@ -144,10 +144,13 @@ def allowed_file(filename):
 def upload_form():
     return render_template("doctors/file_upload.html")
 
+
+## to save in database
 @doctor_blueprint.route("/upload", methods=["POST"])
 @jwt_required()
 def upload_file():
-    current_user = get_jwt_identity()  # Extract user ID from JWT token
+    current_user = get_jwt_identity()
+
 
     user_id = request.form.get("user_id")
     phone_number = request.form.get("phone_number")
@@ -157,9 +160,10 @@ def upload_file():
     selected_lab_test = request.form.get("selected_lab_test")
     result_type = request.form.get("result_type")
     file = request.files.get("files")
-    if not all(
-            [user_id, phone_number, country_code, id_of_uploader, result_date, selected_lab_test, result_type, file]):
-            return jsonify({"error": "Missing required fields", "missing_fields": {
+
+
+    if not all([user_id, phone_number, country_code, id_of_uploader, result_date, selected_lab_test, result_type, file]):
+        return jsonify({"error": "Missing required fields", "missing_fields": {
             "user_id": user_id,
             "phone_number": phone_number,
             "country_code": country_code,
@@ -169,20 +173,32 @@ def upload_file():
             "result_type": result_type,
         }}), 400
 
+
     if not allowed_file(file.filename):
         return jsonify({"error": "Invalid file format. Allowed: pdf, jpg, png"}), 400
+
 
     filename = secure_filename(file.filename)
     file_path = os.path.join(UPLOAD_FOLDER, f"user_{user_id}_{filename}")
     file.save(file_path)
 
-    # return jsonify({
-    #     "message": "File uploaded successfully",
-    #     "file_url": file_path
-    # }), 200
-    return jsonify({"message": "File uploaded successfully!"}), 200
 
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO files (user_id, file_name, upload_date, status)
+            VALUES (%s, %s, %s, %s)
+        """, (user_id, filename, result_date, 'pending'))  # Default status is 'pending'
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Failed to insert file metadata into database: {str(e)}"}), 500
+    finally:
+        cursor.close()
+        conn.close()
 
+    return jsonify({"message": "File uploaded and metadata stored successfully!"}), 200
 
 @doctor_blueprint.route('/get-all-files-users', methods=['GET'])
 @jwt_required()
@@ -269,3 +285,80 @@ def update_file_status():
     conn.close()
 
     return jsonify({"message": f"File {new_status} successfully!"}), 200
+
+
+@doctor_blueprint.route("/get-user-by-phone", methods=["GET"])
+@jwt_required()
+def get_user_by_phone():
+
+
+    phone_number = request.args.get("phone_number")
+    country_code = request.args.get("country_code", "").strip()
+    if not country_code.startswith("+"):
+        country_code = f"+{country_code}" # +20 problem
+    if not phone_number or not country_code:
+        return jsonify({"error": "Missing required parameters: phone_number and country_code"}), 400
+
+
+    print(f"Querying user with phone_number={phone_number}, country_code={country_code}")
+
+
+    current_user = get_jwt_identity()
+    try:
+        current_user = json.loads(current_user)
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid token format"}), 401
+
+    conn = get_db_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)  # Use to return dictionary
+
+    try:
+
+        cursor.execute("""
+            SELECT * FROM doctors
+            WHERE phone_number = %s AND country_code = %s
+        """, (phone_number, country_code))
+        user = cursor.fetchone()
+
+
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        cursor.execute("""
+            SELECT * FROM files
+            WHERE user_id = %s
+        """, (user["id"],))
+        files = cursor.fetchall()
+
+
+        response = {
+            "user": {
+                "id": user["id"],
+                "phone_number": user["phone_number"],
+                "country_code": user["country_code"],
+                "name": user["username"],
+
+            },
+            "files": [
+                {
+                    "file_id": file["file_id"],
+                    "file_name": file["file_name"],
+                    "upload_date": file["upload_date"].isoformat() if file["upload_date"] else None,
+                    "status": file["status"]
+                }
+                for file in files
+            ]
+        }
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+    finally:
+        cursor.close()
+        conn.close()
+@doctor_blueprint.route("/userinfo", methods=["GET"])
+def user_info():
+    return render_template("doctors/userinfo.html")
+

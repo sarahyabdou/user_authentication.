@@ -23,7 +23,7 @@ class User(db.Model):
     password=db.Column(db.String(200),nullable=False)
     role = db.Column(db.String(20), default='user')
 
-
+    country_code = db.Column(db.String(10), nullable=True)
     phone_number=db.Column(db.String(15),unique=True)
     first_name=db.Column(db.String(50))
     last_name=db.Column(db.String(50))
