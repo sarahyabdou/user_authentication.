@@ -83,6 +83,7 @@ class File(db.Model):
     file_name = db.Column(db.String(255), nullable=False)
     upload_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(50), nullable=False)
+    file_path = db.Column(db.String(255))
 
     # Relationship with the User model
     user = db.relationship('User', backref=db.backref('files', lazy=True))
@@ -94,6 +95,9 @@ class File(db.Model):
             'file_name': self.file_name,
             'upload_date': self.upload_date,
             'status': self.status,
+            'file_path' : self.file_path
         }
 
 # point3
+
+

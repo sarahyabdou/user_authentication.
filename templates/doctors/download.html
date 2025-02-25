@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Info and Download</title>
+</head>
+<body>
+    <h1>File Information</h1>
+    <label for="fileIdInput">Enter File ID:</label>
+    <input type="number" id="fileIdInput" placeholder="File ID">
+    <button id="fetchInfoButton">Fetch File Info</button>
+
+    <div id="fileInfo" style="margin-top: 20px; display: none;">
+        <h2>File Details</h2>
+        <p><strong>File Name:</strong> <span id="fileName"></span></p>
+        <button id="downloadButton">Download File</button>
+    </div>
+
+    <script>
+        // Fetch file info when the button is clicked
+        document.getElementById('fetchInfoButton').addEventListener('click', function() {
+            const fileId = document.getElementById('fileIdInput').value;
+            const token = localStorage.getItem('jwt_token');
+
+            if (!fileId) {
+                alert('Please enter a valid File ID');
+                return;
+            }
+
+            if (!token) {
+                alert('No JWT token found in localStorage. Please log in.');
+                return;
+            }
+
+            fetch(`/api/file-info/${fileId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.message || 'Failed to fetch file info');
+                    });
+                }
+                return response.json();
+            })
+            .then(fileInfo => {
+                // Display file info
+                document.getElementById('fileName').textContent = fileInfo.file_name;
+                document.getElementById('fileInfo').style.display = 'block';
+
+                // Set up the download button
+                document.getElementById('downloadButton').onclick = function() {
+                    downloadFile(fileInfo.file_id, token);
+                };
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(error.message || 'Failed to fetch file info');
+            });
+        });
+
+        // Function to handle file download
+        function downloadFile(fileId, token) {
+            fetch(`/api/download-file/${fileId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.message || 'Failed to download file');
+                    });
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // Create a link element
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = document.getElementById('fileName').textContent;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(error.message || 'Failed to download file');
+            });
+        }
+    </script>
+</body>
+</html>

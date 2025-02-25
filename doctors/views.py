@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import  re
+from io import BytesIO
 
 from sqlalchemy.dialects.postgresql import psycopg2
 
@@ -16,14 +17,14 @@ UPLOAD_FOLDER = "uploads"
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token, current_user
 
 from datetime import  datetime,timedelta
-from flask import Flask, request, jsonify, app, render_template, flash, redirect, url_for, session
+from flask import Flask, request, jsonify, app, render_template, flash, redirect, url_for, session, send_file
 
 from functools import  wraps
 from app.config import DevelopmentConfig
 import jwt
 from werkzeug.security import generate_password_hash
 import psycopg2
-from app.models import User, db
+from app.models import User, db, File
 from flask import jsonify
 from app.doctors import doctor_blueprint
 
@@ -361,4 +362,81 @@ def get_user_by_phone():
 @doctor_blueprint.route("/userinfo", methods=["GET"])
 def user_info():
     return render_template("doctors/userinfo.html")
+@doctor_blueprint.route('/down', methods=['GET'])
+def download_page():
+    return render_template('doctors/download.html')
 
+@doctor_blueprint.route('/download-file/<int:file_id>', methods=['GET'])
+@jwt_required()
+def download_file(file_id):
+    current_user = get_jwt_identity()
+
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+
+    cursor.execute("SELECT file_name, file_path FROM files WHERE file_id = %s", (file_id,))
+    file_record = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    if not file_record:
+        return jsonify({"message": "File not found"}), 404
+
+    filename, file_path = file_record
+
+    if not file_path:
+        return jsonify({"message": "File path is missing in the database"}), 500
+
+
+    if not os.path.exists(file_path):
+        return jsonify({"message": "File does not exist on the server"}), 404
+
+    return send_file(file_path, as_attachment=True, download_name=filename)
+
+import logging
+
+@doctor_blueprint.route('/file-info/<int:file_id>', methods=['GET'])
+@jwt_required()
+def get_file_info(file_id):
+    try:
+        current_user = get_jwt_identity()
+
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+
+        cursor.execute("SELECT file_name, file_path FROM files WHERE file_id = %s", (file_id,))
+        file_record = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if not file_record:
+            logging.error(f"File not found for file_id: {file_id}")
+            return jsonify({"message": "File not found"}), 404
+
+        filename, file_path = file_record
+
+
+        if not file_path:
+            logging.error(f"File path missing for file_id: {file_id}")
+            return jsonify({"message": "File path is missing in the database"}), 500
+
+
+        if not os.path.exists(file_path):
+            logging.error(f"File does not exist on server for file_id: {file_id}")
+            return jsonify({"message": "File does not exist on the server"}), 404
+
+
+        return jsonify({
+            "file_id": file_id,
+            "file_name": filename,
+            "file_path": file_path
+        })
+    except Exception as e:
+        logging.error(f"Error in get_file_info: {str(e)}")
+        return jsonify({"message": "Internal server error"}), 500
