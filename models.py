@@ -31,11 +31,32 @@ class User(db.Model):
     def __str__(self):
         return {self.username},{self.password},self.last_name
 
+    @staticmethod
+    def update_name(current_username, new_name):
+        user = User.query.filter_by(username=current_username).first()
+        if not user:
+            print("❌ User not found")  # Debugging
+            return jsonify({'error': 'User not found'}), 404
 
+        print(f"✅ Updating username from {user.username} to {new_name}")  # Debugging
+        user.username = new_name
+        db.session.commit()
+        return jsonify({'message': 'Username updated successfully'}), 200
+
+    @staticmethod
+    def update_password(current_username, new_password):
+        user = User.query.filter_by(username=current_username).first()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        user.password = generate_password_hash(new_password)
+        db.session.commit()
+        return jsonify({'message': 'Password updated successfully'}), 200
     @classmethod
     def user_exists(cls, username):
         user = db.session.query(cls.id).filter_by(username=username).first()
         return user is not None
+
 
     @classmethod
     def login(cls, username, password):

@@ -94,8 +94,47 @@ def signup():
     return render_template('doctors/signup.html')
 
 
+import json  # Import JSON module
 
 
+@doctor_blueprint.route('/update-profile', methods=['POST'])
+@jwt_required()
+def update_info():
+    current_user = get_jwt_identity()
+
+
+    if isinstance(current_user, str):
+        try:
+            current_user = json.loads(current_user)
+        except json.JSONDecodeError:
+            return jsonify({'error': 'Invalid token format'}), 400
+
+    username = current_user.get('username')
+
+
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+
+        return jsonify({'error': 'User not found'}), 404
+
+    data = request.get_json(silent=True)
+    if not data or ('username' not in data and 'password' not in data):
+        return jsonify({'error': 'Missing username or password'}), 400
+
+    if 'username' in data:
+        user.username = data['username']
+    if 'password' in data:
+        user.password = generate_password_hash(data['password'])
+
+    db.session.commit()
+
+    return jsonify({'message': 'User attributes updated successfully'}), 200
+
+@doctor_blueprint.route('/update_status', methods=['GET'])
+def update_status():
+
+    return render_template('doctors/update_info.html')
 # @doctor_blueprint.route('/profile/<int:user_id>', methods=['GET'])
 # @jwt_required()
 # def get_user_profile(user_id):
