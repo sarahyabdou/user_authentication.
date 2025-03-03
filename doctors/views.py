@@ -1,3 +1,4 @@
+import base64
 import datetime
 import json
 import os
@@ -5,8 +6,7 @@ import  re
 from io import BytesIO
 
 from sqlalchemy.dialects.postgresql import psycopg2
-
-
+from app.doctors.gemini import process_with_gemini
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename, send_from_directory
 from app import Config
@@ -479,3 +479,52 @@ def get_file_info(file_id):
     except Exception as e:
         logging.error(f"Error in get_file_info: {str(e)}")
         return jsonify({"message": "Internal server error"}), 500
+
+
+import base64
+from io import BytesIO
+
+from PIL import Image
+
+def decode_base64_image(base64_string):
+    try:
+        image_data = base64.b64decode(base64_string)
+        image = Image.open(BytesIO(image_data))
+        return image
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@doctor_blueprint.route('/chat', methods=['POST'])
+@jwt_required()
+def chat():
+    current_user = get_jwt_identity()
+    data = request.json
+
+    base64_image = data.get('image')
+    file_id = data.get('file_id')
+    text = data.get('text')
+    session_number = data.get('session_number')
+
+    if not base64_image:
+        return jsonify({"error": "No image provided"}), 400
+
+    try:
+        image = decode_base64_image(base64_image)
+    except Exception as e:
+        return jsonify({"error": "Invalid Base64 image"}), 400
+
+    try:
+        response_text = process_with_gemini(text, image)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({
+        "response": response_text,
+        "session_number": session_number,
+        "user": current_user
+    })
+
+@doctor_blueprint.route('/chatbot', methods=['GET'])
+def upload_image():
+    return render_template("doctors/chat.html")

@@ -4,6 +4,7 @@ from flask import app
 
 
 class Config:
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
     SECRET_KEY = os.urandom(32).hex()
     UPLOAD_FOLDER = "uploads"
     ALLOWED_EXTENSIONS = {"pdf", "jpg", "png"}

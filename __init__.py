@@ -12,7 +12,8 @@ from app.models import User
 from app.doctors import doctor_blueprint
 from app.doctors.views import doctor_blueprint  #
 from flask_jwt_extended import JWTManager
-
+from dotenv import load_dotenv
+import google.generativeai as genai
 from app.models import jwt
 
 api = Api()
@@ -44,6 +45,6 @@ def create_app(config_name='dev'):
 
     app.register_blueprint(doctor_blueprint, url_prefix='/api')
 
-
+    load_dotenv()
 
     return app
