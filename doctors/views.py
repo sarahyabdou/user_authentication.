@@ -66,7 +66,7 @@ def login():
         session['username'] = username
         flash("login successful!", "success")
 
-        return render_template('doctors/login.html', user=response)
+        return render_template('doctors/dashboard.html', user=response)
     else:
         flash(response['error'], 'danger')
         return redirect(url_for('doctor.login'))
@@ -325,7 +325,6 @@ def update_file_status():
     conn.close()
 
     return jsonify({"message": f"File {new_status} successfully!"}), 200
-
 
 @doctor_blueprint.route("/get-user-by-phone", methods=["GET"])
 @jwt_required()
